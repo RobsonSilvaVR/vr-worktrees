@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------
+#  task  -  cria/abre uma worktree (versao bash)
+#
+#  uso:
+#    task <branch>                 checkout de uma branch existente
+#                                  (se a worktree ja existir, so abre)
+#    task <branch-base> <branch>   cria uma branch nova a partir da base
+#
+#  - Dentro de um repositorio: detecta o hub pelo git.
+#  - Fora de um repositorio: mostra um menu (setas + Enter) com os
+#    hubs ja criados para voce escolher onde executar.
+#
+#  O nome da pasta = nome da branch (barras viram '-').
+# ------------------------------------------------------------------
+set -euo pipefail
+
+usage() {
+  echo
+  printf '%s  Comando invalido.%s\n' "$C_RE" "$C_RS"
+  echo
+  printf '%s  uso:%s\n' "$C_YE" "$C_RS"
+  echo "    task <branch>                 checkout de uma branch existente"
+  echo "    task <branch-base> <branch>   cria uma branch nova a partir da base"
+  echo
+}
+
+# raiz para descobrir hubs quando estiver fora de um repo
+if [ -n "${GIT_ROOT:-}" ]; then ROOT="$GIT_ROOT"
+elif [ -d /c ]; then ROOT='/c/git'
+elif [ -d /mnt/c ]; then ROOT='/mnt/c/git'
+else ROOT="$HOME/git"; fi
+
+C_SEL=$'\033[30;46m'   # texto preto, fundo ciano (linha selecionada)
+C_YE=$'\033[33m'; C_RE=$'\033[31m'; C_GR=$'\033[32m'; C_CY=$'\033[36m'; C_DK=$'\033[90m'; C_RS=$'\033[0m'
+
+# menu navegavel por setas. Desenha no /dev/tty e devolve a escolha no stdout.
+select_hub() {
+  local -a items=("$@")
+  local idx=0 key rest n=${#items[@]} i name
+  tput civis >/dev/tty 2>/dev/null || true
+
+  draw() {
+    printf '\n' >/dev/tty
+    printf '  %sVoce nao esta em um repositorio. Selecione o projeto:%s\n' "$C_YE" "$C_RS" >/dev/tty
+    printf '\n' >/dev/tty
+    for i in "${!items[@]}"; do
+      name="$(basename "${items[$i]}")"
+      if [ "$i" -eq "$idx" ]; then
+        printf '  %s ❯ %s %s\n' "$C_SEL" "$name" "$C_RS" >/dev/tty
+      else
+        printf '     %s\n' "$name" >/dev/tty
+      fi
+    done
+    printf '\n' >/dev/tty
+    printf '  %sSetas ↑↓: Selecionar  ·  Enter: Confirma  ·  Esc: Cancela%s\n' "$C_DK" "$C_RS" >/dev/tty
+  }
+
+  draw
+  while true; do
+    IFS= read -rsn1 key </dev/tty
+    case "$key" in
+      $'\x1b')
+        read -rsn2 -t 0.05 rest </dev/tty || rest=""
+        case "$rest" in
+          '[A') idx=$(( (idx - 1 + n) % n ));;
+          '[B') idx=$(( (idx + 1) % n ));;
+          '')   tput cnorm >/dev/tty 2>/dev/null || true; return 1;;   # Esc
+        esac;;
+      '')   # Enter
+        tput cnorm >/dev/tty 2>/dev/null || true
+        printf '%s\n' "${items[$idx]}"
+        return 0;;
+    esac
+    tput cuu $(( n + 5 )) >/dev/tty 2>/dev/null || true
+    tput ed >/dev/tty 2>/dev/null || true
+    draw
+  done
+}
+
+# --- argumentos ---
+BASE=""
+case "$#" in
+  1) NEW="$1"; MODE="checkout";;
+  2) BASE="$1"; NEW="$2"; MODE="create";;
+  *) usage; exit 1;;
+esac
+
+# --- descobre o hub ---
+if COMMON="$(git rev-parse --git-common-dir 2>/dev/null)"; then
+  case "$COMMON" in
+    /*|[A-Za-z]:*) ;;
+    *) COMMON="$(cd "$COMMON" && pwd)";;
+  esac
+  HUB="$(dirname "$COMMON")"
+else
+  HUBS=()
+  if [ -d "$ROOT" ]; then
+    for d in "$ROOT"/*/; do
+      [ -d "${d}.bare" ] && HUBS+=("${d%/}")
+    done
+  fi
+  if [ ${#HUBS[@]} -eq 0 ]; then
+    printf '%sVoce nao esta em um repositorio git e nenhum hub worktree foi encontrado em %s.%s\n' "$C_RE" "$ROOT" "$C_RS" >&2
+    exit 1
+  fi
+  if ! HUB="$(select_hub "${HUBS[@]}")"; then
+    echo "  cancelado."
+    exit 1
+  fi
+fi
+
+folder="${NEW//\//-}"
+dest="$HUB/$folder"
+
+open_tab() {
+  if command -v wt.exe >/dev/null 2>&1; then
+    local d="$1"
+    if command -v cygpath >/dev/null 2>&1; then d="$(cygpath -w "$1")"; fi
+    wt.exe -w 0 nt --title "$NEW" -d "$d" >/dev/null 2>&1 || true
+  fi
+}
+
+branch_remote() { git ls-remote --heads origin "$1" | grep -q .; }
+
+# worktree ja existe?
+if [ -e "$dest" ]; then
+  if [ "$MODE" = "checkout" ]; then
+    echo "Worktree ja existe: $dest (abrindo)"
+    open_tab "$dest"
+    exit 0
+  fi
+  printf '%sERRO: ja existe %s.%s\n' "$C_RE" "$dest" "$C_RS" >&2
+  exit 1
+fi
+
+cd "$HUB"
+printf '%sProjeto: %s%s\n' "$C_CY" "$HUB" "$C_RS"
+echo "Atualizando refs do remoto..."
+git fetch origin --prune
+
+if [ "$MODE" = "checkout" ]; then
+  if branch_remote "$NEW" || git show-ref --verify --quiet "refs/heads/$NEW"; then
+    echo "Checkout da branch '$NEW'."
+    git worktree add "$dest" "$NEW"
+  else
+    printf '%sERRO: a branch %s nao existe.%s\n' "$C_RE" "$NEW" "$C_RS" >&2
+    echo "Para criar uma branch nova: task <branch-base> $NEW" >&2
+    exit 1
+  fi
+else
+  if branch_remote "$NEW"; then
+    echo "Branch '$NEW' existe no remoto -> checkout."
+    git worktree add "$dest" "$NEW"
+  else
+    if branch_remote "$BASE"; then baseref="origin/$BASE"; else baseref="$BASE"; fi
+    echo "Criando branch '$NEW' a partir de '$baseref'."
+    git worktree add -b "$NEW" "$dest" "$baseref"
+  fi
+fi
+
+printf '%sPronto: %s  (branch %s)%s\n' "$C_GR" "$dest" "$NEW" "$C_RS"
+open_tab "$dest"
