@@ -44,23 +44,22 @@ function Open-Tab {
 }
 
 function Select-Hub {
+  # Menu navegavel por setas (cursor relativo via ANSI). Devolve o caminho ou $null (Esc).
   param([string[]]$items)
+  $e = [char]27
   $count = $items.Count
-
-  # --- menu com setas; se o console nao permitir, cai no modo numerado ---
+  $idx = 0
+  $lines = $count + 5   # blank + titulo + blank + opcoes + blank + rodape
+  try { [Console]::CursorVisible = $false } catch { }
   try {
-    $idx = 0
-    Write-Host ''
-    Write-Host '  Voce nao esta em um repositorio. Selecione o projeto:' -ForegroundColor Yellow
-    Write-Host ''
-    for ($i = 0; $i -lt $count; $i++) { Write-Host '' }     # reserva as linhas das opcoes
-    $top = [Console]::CursorTop - $count
-    Write-Host ''
-    Write-Host ('  ' + $NAV) -ForegroundColor DarkGray
-    [Console]::CursorVisible = $false
+    $first = $true
     while ($true) {
+      if (-not $first) { [Console]::Write("$e[${lines}A$e[0J") }   # sobe e limpa
+      $first = $false
+      Write-Host ''
+      Write-Host '  Voce nao esta em um repositorio. Selecione o projeto:' -ForegroundColor Yellow
+      Write-Host ''
       for ($i = 0; $i -lt $count; $i++) {
-        [Console]::SetCursorPosition(0, $top + $i)
         $name = Split-Path $items[$i] -Leaf
         if ($i -eq $idx) {
           Write-Host (('  ' + $ARROW + ' ' + $name).PadRight(50)) -ForegroundColor Black -BackgroundColor Cyan
@@ -68,28 +67,17 @@ function Select-Hub {
           Write-Host (('    ' + $name).PadRight(50))
         }
       }
+      Write-Host ''
+      Write-Host ('  ' + $NAV) -ForegroundColor DarkGray
       $key = [Console]::ReadKey($true)
       switch ($key.Key) {
         'UpArrow'   { $idx = ($idx - 1 + $count) % $count }
         'DownArrow' { $idx = ($idx + 1) % $count }
-        'Enter'     { [Console]::CursorVisible = $true; [Console]::SetCursorPosition(0, $top + $count + 2); return $items[$idx] }
-        'Escape'    { [Console]::CursorVisible = $true; [Console]::SetCursorPosition(0, $top + $count + 2); return $null }
+        'Enter'     { return $items[$idx] }
+        'Escape'    { return $null }
       }
     }
-  } catch {
-    [Console]::CursorVisible = $true
-    # fallback: lista numerada
-    Write-Host ''
-    Write-Host '  Selecione o repositorio:' -ForegroundColor Yellow
-    for ($i = 0; $i -lt $count; $i++) {
-      Write-Host ('   {0}) {1}' -f ($i + 1), (Split-Path $items[$i] -Leaf))
-    }
-    $sel = Read-Host '   Numero'
-    if ($sel -match '^\d+$' -and [int]$sel -ge 1 -and [int]$sel -le $count) {
-      return $items[[int]$sel - 1]
-    }
-    return $null
-  }
+  } finally { try { [Console]::CursorVisible = $true } catch { } }
 }
 
 # ---------------- inicio ----------------
