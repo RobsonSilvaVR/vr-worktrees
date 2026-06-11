@@ -7,5 +7,6 @@ rem
 rem  uso:
 rem    task <branch>                 checkout de uma branch existente
 rem    task <branch-base> <branch>   cria uma branch nova a partir da base
+rem    task update                   atualiza (git pull) e religa as dependencias VR locais
 rem ------------------------------------------------------------------
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0task.ps1" %*

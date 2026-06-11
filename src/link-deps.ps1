@@ -43,6 +43,11 @@ param(
     [switch]$Pull
 )
 
+# git escreve mensagens informativas no stderr; evita que isso vire erro
+# terminante quando chamado de um contexto com ErrorActionPreference = 'Stop'
+# (ex.: o subcomando "task update", cujo task.ps1 usa Stop).
+$ErrorActionPreference = 'Continue'
+
 function Resolve-BaseBranch {
     param([string]$RepoPath, [string[]]$Candidates)
 

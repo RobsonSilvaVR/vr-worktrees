@@ -119,7 +119,7 @@ install_dep_hook() { # bare
 #!/bin/sh
 # Religa as juncoes das dependencias VR locais conforme a branch-base do worktree.
 # Instalado automaticamente pelo vrwork (apenas VRMaster e VRAutorizador).
-# A ATUALIZACAO (git pull) das dependencias fica a cargo do comando manual "vrdeps".
+# A ATUALIZACAO (git pull) das dependencias fica a cargo do comando "task update".
 # Args: $1=old-head  $2=new-head  $3=flag (1 = troca de branch / git worktree add)
 [ "$3" = "1" ] || exit 0
 wt="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0

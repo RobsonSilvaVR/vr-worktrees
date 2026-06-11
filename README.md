@@ -28,10 +28,10 @@ Scripts para trabalhar com os repositórios VR usando **git worktree**: um clone
 
    Rodando o `task` fora de um repositório, ele abre um menu para escolher o projeto.
 
-4. Atualizar e religar as dependências VR locais com `vrdeps` (dentro de uma worktree):
+4. Atualizar e religar as dependências VR locais com `task update` (dentro de uma worktree):
 
    ```
-   vrdeps
+   task update
    ```
 
    Faz `git pull` e religa as junções de `VRNfe`, `VRConnect`, `VRWorkflow` e
@@ -48,7 +48,7 @@ branch-base do worktree atual — assim o Gradle compila contra o fonte local.
   no `git status`. O `settings.gradle` a encontra via `../<Dep>`.
 - A base é detectada por `git merge-base` (a base mais específica vence).
 - A **atualização** (`git pull`) das dependências é feita **só** pelo comando
-  manual `vrdeps`; o hook apenas religa.
+  manual `task update`; o hook apenas religa.
 
 ## Estrutura
 
@@ -58,14 +58,12 @@ branch-base do worktree atual — assim o Gradle compila contra o fonte local.
 ├── install.sh         instalador (Git Bash / WSL)
 ├── README.md
 └── src/               arquivos copiados para C:\git\bin na instalação
-    ├── task               comando task (bash)
+    ├── task               comando task (bash) — inclui o subcomando "task update"
     ├── task.ps1           lógica do task (Windows)
     ├── task.cmd           atalho do task (PowerShell/cmd)
     ├── repositorio-worktrees.ps1   menu vrwork (Windows) — instala o hook post-checkout
     ├── repositorio-worktrees.sh    menu vrwork (Git Bash / WSL)
-    ├── link-deps.ps1      detecta a base e religa (com -Pull) as dependências locais
-    ├── vrdeps.cmd         comando vrdeps (PowerShell/cmd): git pull + religa
-    └── vrdeps             comando vrdeps (bash)
+    └── link-deps.ps1      detecta a base e religa (com -Pull) as dependências locais
 ```
 
 ## Requisitos

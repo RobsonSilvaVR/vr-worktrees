@@ -5,6 +5,7 @@
   uso:
     task <branch>                 checkout de uma branch existente
     task <branch-base> <branch>   cria uma branch nova a partir da base
+    task update                   atualiza (git pull) e religa as dependencias VR locais
 
   - Dentro de um repositorio worktree: detecta o hub pelo git.
   - Fora de um repositorio: mostra um menu (setas + Enter) com os
@@ -25,6 +26,7 @@ function Show-Usage {
   Write-Host '  uso:' -ForegroundColor Yellow
   Write-Host '    task <branch>                 checkout de uma branch existente'
   Write-Host '    task <branch-base> <branch>   cria uma branch nova a partir da base'
+  Write-Host '    task update                   atualiza (git pull) e religa as dependencias VR locais'
   Write-Host ''
 }
 
@@ -81,6 +83,22 @@ function Select-Hub {
 }
 
 # ---------------- inicio ----------------
+
+# subcomando: "task update" -> atualiza (git pull) e religa as dependencias VR locais
+if ($args.Count -eq 1 -and $args[0] -eq 'update') {
+  $wt = git rev-parse --show-toplevel 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $wt) {
+    Write-Host 'task update: execute dentro de um worktree (repositorio git).' -ForegroundColor Red
+    exit 1
+  }
+  $linker = Join-Path $PSScriptRoot 'link-deps.ps1'
+  if (-not (Test-Path $linker)) {
+    Write-Host "task update: link-deps.ps1 nao encontrado em $PSScriptRoot." -ForegroundColor Red
+    exit 1
+  }
+  & $linker -AppWorktree $wt -Pull
+  exit 0
+}
 
 if ($args.Count -lt 1 -or $args.Count -gt 2) { Show-Usage; exit 1 }
 if ($args.Count -eq 1) {

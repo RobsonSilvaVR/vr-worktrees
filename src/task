@@ -6,6 +6,7 @@
 #    task <branch>                 checkout de uma branch existente
 #                                  (se a worktree ja existir, so abre)
 #    task <branch-base> <branch>   cria uma branch nova a partir da base
+#    task update                   atualiza (git pull) e religa as dependencias VR locais
 #
 #  - Dentro de um repositorio: detecta o hub pelo git.
 #  - Fora de um repositorio: mostra um menu (setas + Enter) com os
@@ -22,6 +23,7 @@ usage() {
   printf '%s  uso:%s\n' "$C_YE" "$C_RS"
   echo "    task <branch>                 checkout de uma branch existente"
   echo "    task <branch-base> <branch>   cria uma branch nova a partir da base"
+  echo "    task update                   atualiza (git pull) e religa as dependencias VR locais"
   echo
 }
 
@@ -77,6 +79,17 @@ select_hub() {
     draw
   done
 }
+
+# subcomando: "task update" -> atualiza (git pull) e religa as dependencias VR locais
+if [ "$#" -eq 1 ] && [ "$1" = "update" ]; then
+  wt="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -z "$wt" ]; then
+    printf '%stask update: execute dentro de um worktree (repositorio git).%s\n' "$C_RE" "$C_RS" >&2
+    exit 1
+  fi
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:/git/bin/link-deps.ps1" -AppWorktree "$wt" -Pull
+  exit 0
+fi
 
 # --- argumentos ---
 BASE=""
