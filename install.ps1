@@ -16,7 +16,7 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $bin = 'C:\git\bin'
 $src = Join-Path $PSScriptRoot 'src'
 
-$required = @('task','task.ps1','task.cmd','repositorio-worktrees.ps1','repositorio-worktrees.sh')
+$required = @('task','task.ps1','task.cmd','repositorio-worktrees.ps1','repositorio-worktrees.sh','link-deps.ps1','vrdeps.cmd','vrdeps')
 foreach ($f in $required) {
   if (-not (Test-Path (Join-Path $src $f))) {
     throw "Nao encontrei '$f' na pasta 'src'. Mantenha install.ps1 ao lado da pasta src do repositorio."
@@ -60,7 +60,7 @@ Write-Host '  ============================================================' -For
 Write-Host '   Instalacao concluida!  ' -ForegroundColor Green -NoNewline; Write-Host 'Abra um NOVO terminal para usar.' -ForegroundColor DarkGray
 Write-Host '  ============================================================' -ForegroundColor Cyan
 Write-Host ''
-Write-Host '  Voce agora tem dois comandos globais:' -ForegroundColor Yellow
+Write-Host '  Voce agora tem tres comandos globais:' -ForegroundColor Yellow
 Write-Host ''
 Write-Host '   vrwork' -ForegroundColor Green
 Write-Host '       Abre o menu VR Worktrees para montar um repositorio'
@@ -73,7 +73,11 @@ Write-Host '   task <branch-base> <branch>' -ForegroundColor Green
 Write-Host '       Cria uma branch nova a partir da base.'
 Write-Host '       Ex: ' -NoNewline; Write-Host 'task main PPV-123' -ForegroundColor Green
 Write-Host ''
-Write-Host '   Dica: os comandos vrwork e task podem ser executados de qualquer pasta.' -ForegroundColor DarkGray
+Write-Host '   vrdeps' -ForegroundColor Green
+Write-Host '       Dentro de uma worktree de VRMaster/VRAutorizador: atualiza'
+Write-Host '       (git pull) e religa as dependencias VR locais conforme a base.'
+Write-Host ''
+Write-Host '   Dica: vrwork, task e vrdeps podem ser executados de qualquer pasta.' -ForegroundColor DarkGray
 Write-Host ''
 Write-Host '   Para o Git Bash, rode tambem: bash install.sh' -ForegroundColor DarkGray
 Write-Host ''

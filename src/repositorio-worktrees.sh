@@ -110,6 +110,28 @@ select_menu() {
   done
 }
 
+install_dep_hook() { # bare
+  # Instala o hook post-checkout que religa as juncoes das dependencias VR
+  # locais conforme a branch-base do worktree. So em VRMaster/VRAutorizador.
+  local bare="$1" hooks="$1/hooks"
+  mkdir -p "$hooks"
+  cat > "$hooks/post-checkout" <<'EOF'
+#!/bin/sh
+# Religa as juncoes das dependencias VR locais conforme a branch-base do worktree.
+# Instalado automaticamente pelo vrwork (apenas VRMaster e VRAutorizador).
+# A ATUALIZACAO (git pull) das dependencias fica a cargo do comando manual "vrdeps".
+# Args: $1=old-head  $2=new-head  $3=flag (1 = troca de branch / git worktree add)
+[ "$3" = "1" ] || exit 0
+wt="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+script="C:/git/bin/link-deps.ps1"
+[ -f "$script" ] || exit 0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$script" -AppWorktree "$wt" || true
+exit 0
+EOF
+  chmod +x "$hooks/post-checkout" 2>/dev/null || true
+  printf '%s  hook post-checkout instalado.%s\n' "$C_GR" "$C_RS"
+}
+
 setup_repo() { # nome [url]
   local name="$1" url="${2:-}"
   [ -z "$url" ] && url="$(repo_url "$name")"
@@ -145,6 +167,11 @@ setup_repo() { # nome [url]
   git --git-dir="$bare" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
   git --git-dir="$bare" fetch origin --prune
   printf 'gitdir: ./.bare\n' > "$hub/.git"
+
+  # 3b) hook post-checkout (apenas apps com dependencias locais)
+  case "$name" in
+    VRMaster|VRAutorizador) install_dep_hook "$bare";;
+  esac
 
   # 4) worktrees base
   (

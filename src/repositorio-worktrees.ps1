@@ -105,6 +105,34 @@ function Select-Menu {
   }
 }
 
+function Install-DepHook {
+  # Instala o hook post-checkout que religa as juncoes das dependencias VR
+  # locais conforme a branch-base do worktree. Usado so em VRMaster/VRAutorizador.
+  param([Parameter(Mandatory)][string]$Bare)
+
+  $hooksDir = Join-Path $Bare 'hooks'
+  New-Item -ItemType Directory -Force -Path $hooksDir | Out-Null
+  $hookPath = Join-Path $hooksDir 'post-checkout'
+
+  $hook = @'
+#!/bin/sh
+# Religa as juncoes das dependencias VR locais conforme a branch-base do worktree.
+# Instalado automaticamente pelo vrwork (apenas VRMaster e VRAutorizador).
+# A ATUALIZACAO (git pull) das dependencias fica a cargo do comando manual "vrdeps".
+# Args: $1=old-head  $2=new-head  $3=flag (1 = troca de branch / git worktree add)
+[ "$3" = "1" ] || exit 0
+wt="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+script="C:/git/bin/link-deps.ps1"
+[ -f "$script" ] || exit 0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$script" -AppWorktree "$wt" || true
+exit 0
+'@
+
+  # grava com LF (o hook e executado pelo sh do Git)
+  [System.IO.File]::WriteAllText($hookPath, ($hook -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding($false)))
+  Write-Host "  hook post-checkout instalado." -ForegroundColor Green
+}
+
 function Setup-Repo {
   param(
     [Parameter(Mandatory)] [string]   $name,
@@ -148,6 +176,9 @@ function Setup-Repo {
   git --git-dir="$bare" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
   git --git-dir="$bare" fetch origin --prune
   Set-Content -Path (Join-Path $hub '.git') -Value 'gitdir: ./.bare' -Encoding ascii
+
+  # 3b) hook post-checkout: religa dependencias locais (so nos apps que as usam)
+  if ($name -in @('VRMaster', 'VRAutorizador')) { Install-DepHook -Bare $bare }
 
   # 4) worktrees base
   Push-Location $hub

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# vrdeps - atualiza (git pull) e religa as dependencias VR locais do worktree atual.
+# Detecta o worktree pelo git; se nao estiver num repo, usa o diretorio atual.
+wt="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:/git/bin/link-deps.ps1" -AppWorktree "$wt" -Pull "$@"
